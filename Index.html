@@ -398,7 +398,8 @@ const USERS_DB = [
   {name:"KAVITA",     id:"EMP004", pwd:"78cfb9eab603d845b83bf46a498200622772b50f15227a2734768faa3a8e720e", role:"admin", priceType:"A", allowed:["PTY-001","PTY-002","PTY-003","PTY-004","PTY-005"]},
   {name:"MOHIT",      id:"EMP005", pwd:"ee2aaacee5615cc0ef7ab9de0d08318e9f33fde5dd9f9ce4c334cd594db6a86b", role:"user",  priceType:"A", allowed:[]},
   {name:"SAURABH",    id:"EMP006", pwd:"60e23ac29306c3510e1e545a76b58497299944c2925ab8ba31c9c5a9d049e932", role:"user",  priceType:"A", allowed:[]},
-  {name:"BALASUNDARAM",id:"EMP0008",pwd:"072afe17d76d077f453f3da099b283c767ba7328bc058dd5d0c8d7197549f30e", role:"user",  priceType:"A", allowed:["PTY-003","PTY-010","PTY-015","PTY-017"]}
+  {name:"BALASUNDARAM",id:"EMP0008",pwd:"072afe17d76d077f453f3da099b283c767ba7328bc058dd5d0c8d7197549f30e", role:"user",  priceType:"A", allowed:["PTY-003","PTY-010","PTY-015","PTY-017"]},
+  {name:"MANOJ",       id:"EMP009", pwd:"59d40fc48a687345df570640713fe61f0ff99ace8f593ca01d04a0caf4b1d4ea", role:"user",  priceType:"E", allowed:["PTY-035"]}
 ];
 
 const PARTIES_DB = [
@@ -836,10 +837,7 @@ let quickPT = 'A';         // price type for quick PO mode
 
 function getPrice(sku, pt){
   const raw = (PRICE_DB[sku] && PRICE_DB[sku][pt]) ? PRICE_DB[sku][pt] : 0;
-  if(!raw) return 0;
-  const item = ITEMS_DB.find(i=>i.sku===sku);
-  const gstRate = item ? item.gst : 18;
-  return Math.round(raw / (1 + gstRate/100));
+  return raw; // prices in PRICE_DB are already GST inclusive
 }
 function getPT(){
   if(poMode === 'quick') return quickPT;
@@ -1709,7 +1707,9 @@ function skuRenderTable(items){
     return;
   }
   body.innerHTML=items.map(function(item){
-    var price=skuInclPrice(item.sku);
+    var pt = getPT ? getPT() : 'A';
+    var price = (typeof getPrice === 'function') ? getPrice(item.sku, pt) : skuInclPrice(item.sku);
+    if(!price) price = skuInclPrice(item.sku);
     var qty=skuQty[item.sku]||0;
     var amt=price*qty;
     return '<tr>'
@@ -1832,8 +1832,7 @@ function poRenderItems(items){
   var priceType = (selectedParty && selectedParty.priceType) ? selectedParty.priceType : (currentUser ? currentUser.priceType : 'A');
   body.innerHTML = items.map(function(item){
     var priceObj = PRICE_DB[item.sku];
-    var baseRate = priceObj ? (priceObj[priceType]||priceObj['A']||0) : 0;
-    var inclRate = Math.round(baseRate * 1.18);
+    var inclRate = priceObj ? (priceObj[priceType]||priceObj['A']||0) : 0;
     var qty = poItemQty[item.sku] || 0;
     var amt = inclRate * qty;
     return '<tr>'
@@ -1883,8 +1882,7 @@ function buildRowsFromPoItems(){
     var item = ITEMS_DB.find(function(i){ return i.sku===sku; });
     if(!item) return;
     var priceType = (selectedParty && selectedParty.priceType) ? selectedParty.priceType : (currentUser ? currentUser.priceType : 'A');
-    var baseRate = PRICE_DB[sku] ? (PRICE_DB[sku][priceType]||PRICE_DB[sku]['A']||0) : 0;
-    var inclRate = Math.round(baseRate * 1.18);
+    var inclRate = PRICE_DB[sku] ? (PRICE_DB[sku][priceType]||PRICE_DB[sku]['A']||0) : 0;
     rows.push({
       id: ++rowId,
       name: item.name,
@@ -1908,4 +1906,3 @@ document.addEventListener('click',function(e){
 </script>
 </body>
 </html>
-ok
